@@ -173,13 +173,9 @@ async function install_plain_lua_windows(luaExtractPath, luaInstallPath, luaVers
 
         let srcName = pathJoin("src", file)
 
-        let args = (mode === "lib")
-                 ? [ "-DLUA_BUILD_AS_DLL", srcName ]
-                 : [ srcName ]
-
         objs[mode].push(file.replace(".c", ".obj"))
 
-        await exec.exec(cl, args, {
+        await exec.exec(cl, [srcName ], {
           cwd: luaExtractPath
         })
       }
@@ -188,20 +184,19 @@ async function install_plain_lua_windows(luaExtractPath, luaInstallPath, luaVers
 
   let luaXYZ = luaVersion.split(".")
   let libFile = "lua" + luaXYZ[0] + luaXYZ[1] + ".lib"
-  let dllFile = "lua" + luaXYZ[0] + luaXYZ[1] + ".dll"
 
   objs["lua"] = [ ...objs["lua"], libFile ]
   objs["luac"] = [ ...objs["luac"], ...objs["lib"] ]
 
-  await msvc_link(luaExtractPath, "link /nologo /DLL", dllFile, objs["lib"]);
+  await msvc_link(luaExtractPath, "lib /nologo", libFile, objs["lib"]);
   await msvc_link(luaExtractPath, "link /nologo", "luac.exe", objs["luac"]);
   await msvc_link(luaExtractPath, "link /nologo", "lua.exe", objs["lua"]);
 
   const luaHpp = (await exists(pathJoin(src, "lua.hpp"))) ? "lua.hpp" : "../etc/lua.hpp"
   const headers = [ "lua.h", "luaconf.h", "lualib.h", "lauxlib.h", luaHpp ]
 
-  await install_files(pathJoin(luaInstallPath, "bin"), luaExtractPath, [ "lua.exe", "luac.exe", dllFile ])
-  await install_files(pathJoin(luaInstallPath, "lib"), luaExtractPath, [ dllFile, libFile ])
+  await install_files(pathJoin(luaInstallPath, "bin"), luaExtractPath, [ "lua.exe", "luac.exe" ])
+  await install_files(pathJoin(luaInstallPath, "lib"), luaExtractPath, [ libFile ])
   await install_files(pathJoin(luaInstallPath, "include"), src, headers)
 }
 
@@ -299,4 +294,3 @@ async function main() {
 main().catch(err => {
   core.setFailed(`Failed to install Lua: ${err}`);
 })
-
